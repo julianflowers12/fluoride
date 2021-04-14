@@ -1,0 +1,85 @@
+---
+title: "Fluoride notes"
+output: html_notebook
+---
+
+```{r}
+library(phlit)
+library(myScrapers)
+library(tidyverse)
+library(pdftools)
+library(rvest)
+library(xml2)
+library(readtext)
+library(quanteda)
+library(textfeatures)
+library(spacyr)
+getwd()
+source('trip_search.R')
+```
+
+## Search gov.uk for fluoride reports from PHE
+
+
+```{r}
+cat <- get_phe_catalogue(n = 500)
+
+published_fluoride_docs <- cat %>%
+  filter(str_detect(Links, "fluor")) %>% 
+  mutate(link1 = str_extract(link, "http.*"), 
+         link1 = str_remove_all(link1, "\\>.*"),
+         pages = map(link1, get_page_docs)) %>%
+  unnest("pages") %>%
+  mutate(text = map(pages, readtext)) %>%
+  unnest("text") %>%
+  reactable::reactable(filterable = TRUE, searchable = TRUE)
+
+published_fluoride_docs
+
+```
+
+## Search TRIP database
+
+```{r}
+
+trip_fluoride <- trip_searchR("flouride")
+
+trip_fluoride <- trip_fluoride %>%
+  mutate(pages = map(link, safely(get_page_docs))) %>%
+  unnest("pages")
+
+trip_fluoride %>%
+  filter(str_detect(pages, "[1-9]"), 
+         !str_detect(pages, "403")) %>%
+  unnest("pages") %>%
+    mutate(pages1 = map(pages, parse_integer))
+
+
+
+```
+
+
+## Pubmed initial search (last 5 years)
+
+```{r}
+
+search <- "fluoride"
+start <- 2015
+end <- 2020
+ncbi_key <- "ncbi_key"
+#n <- 1 
+
+fluoride_pubmed <- phlit::pubmedAbstractR(search = search, start = start, end = end, ncbi_key = "bd86b3e3500c581cbc6ee0896f551bae0408")
+
+
+```
+
+
+```{r}
+
+fluoride_pubmed$abstracts
+
+
+
+```
+
